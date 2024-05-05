@@ -1,24 +1,16 @@
-// Struct Highway
-// read and filter highway
-// 
-
-
 mod tests;
 mod data_prep;
+mod calculate_centrality;
 
+use petgraph::dot::{Config, Dot};
 use serde::Deserialize;
-use petgraph::graph::{NodeIndex, UnGraph};
-use petgraph::{Graph, Undirected};
+use petgraph::graph::UnGraph;
 use std::collections::HashMap;
-use serde_json::Value;
-use serde_json::Error as SerdeError;
-use csv::Reader;
-use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use crate::data_prep::load_and_filter_highways;
 use std::env;
-
+use crate::calculate_centrality::{degree_centrality, betweenness_centrality, closeness_centrality};
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Highway {
@@ -54,43 +46,38 @@ impl Highway {
 }
 
 
-pub fn build_graph(highways: Vec<Highway>) -> UnGraph<String, ()> {
-    let mut graph = UnGraph::<String, ()>::new_undirected();
+fn build_graph(highways: Vec<Highway>) -> UnGraph<String, ()> {
+    let mut graph = UnGraph::new_undirected();
     let mut node_indices = HashMap::new();
 
     for highway in highways {
-        let mut prev_state: Option<String> = None;
-        let states: Vec<String> = serde_json::from_str(&highway.states)
-            .unwrap_or_else(|_| {
-                eprintln!("Invalid JSON string for states: {}", &highway.states);
-                Vec::new()
-            });
+        let states_str = highway.states;
+        let states_vec: Vec<String> = states_str
+            .trim_matches(|c| c == '[' || c == ']' || c == '\\')
+            .trim()
+            .split(',')
+            .map(|s| s.trim().trim_matches('\'').to_string())
+            .collect();
 
-        for state in states {
-            if let Some(prev) = prev_state.take() {
-                if !node_indices.contains_key(&prev) {
-                    let node = graph.add_node(prev);
-                    node_indices.insert(prev, node);
-                }
-                if !node_indices.contains_key(&state) {
-                    let node = graph.add_node(state.clone());
-                    node_indices.insert(state.clone(), node);
-                }
+        for i in 0..states_vec.len() {
+            let state = &states_vec[i];
+            if !node_indices.contains_key(state) {
+                let node = graph.add_node(state.clone());
+                node_indices.insert(state.clone(), node);
+            }
 
-                let from_index = node_indices[&prev];
-                let to_index = node_indices[&state];
+            if i > 0 {
+                let prev_state = &states_vec[i - 1];
+                let from_index = node_indices[prev_state];
+                let to_index = node_indices[state];
                 graph.add_edge(from_index, to_index, ());
             }
-            prev_state = Some(state);
         }
     }
 
     graph
 }
 
-pub fn count_vertices(graph: &Graph<String, (), Undirected>) -> usize {
-    graph.node_count()
-}
 fn main() {
     let current_path = env::current_dir().unwrap();
     println!("Current directory: {:?}", current_path);
@@ -102,9 +89,13 @@ fn main() {
     let highways = load_and_filter_highways(reader).expect("Failed to load and filter highways");
     let graph = match build_graph(highways) {
         graph => graph,
-        // Handle the case where the graph construction fails
     };
-
-    let vertex_count = count_vertices(&graph);
-    println!("The graph has {} vertices.", vertex_count);
+    // Calculate centrality measures
+    println!("Degree Centrality: {:?}", degree_centrality(&graph));
+    println!("Betweenness Centrality: {:?}", betweenness_centrality(&graph));
+    println!("Closeness Centrality: {:?}", closeness_centrality(&graph));
+    let dot_graph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
+    println!("{:?}", dot_graph);
+    
 }
+
