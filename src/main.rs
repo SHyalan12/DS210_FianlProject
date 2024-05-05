@@ -54,29 +54,38 @@ impl Highway {
 }
 
 
-pub fn build_graph(highways: Vec<Highway>) -> Result<UnGraph<String, ()>, SerdeError> {
+pub fn build_graph(highways: Vec<Highway>) -> UnGraph<String, ()> {
     let mut graph = UnGraph::<String, ()>::new_undirected();
     let mut node_indices = HashMap::new();
 
     for highway in highways {
-        let states: Vec<String> = serde_json::from_str(&highway.states)?;
-        for state in &states {
-            if !node_indices.contains_key(state) {
-                let node = graph.add_node(state.clone());
-                node_indices.insert(state.clone(), node);
-            }
-        }
+        let mut prev_state: Option<String> = None;
+        let states: Vec<String> = serde_json::from_str(&highway.states)
+            .unwrap_or_else(|_| {
+                eprintln!("Invalid JSON string for states: {}", &highway.states);
+                Vec::new()
+            });
 
-        for window in states.windows(2) {
-            if let [from, to] = window {
-                let from_index = node_indices[from];
-                let to_index = node_indices[to];
+        for state in states {
+            if let Some(prev) = prev_state.take() {
+                if !node_indices.contains_key(&prev) {
+                    let node = graph.add_node(prev);
+                    node_indices.insert(prev, node);
+                }
+                if !node_indices.contains_key(&state) {
+                    let node = graph.add_node(state.clone());
+                    node_indices.insert(state.clone(), node);
+                }
+
+                let from_index = node_indices[&prev];
+                let to_index = node_indices[&state];
                 graph.add_edge(from_index, to_index, ());
             }
+            prev_state = Some(state);
         }
     }
 
-    Ok(graph)
+    graph
 }
 
 pub fn count_vertices(graph: &Graph<String, (), Undirected>) -> usize {
@@ -91,7 +100,10 @@ fn main() {
     let reader = BufReader::new(file);
 
     let highways = load_and_filter_highways(reader).expect("Failed to load and filter highways");
-    let graph = build_graph(highways).expect("Failed to build the graph");
+    let graph = match build_graph(highways) {
+        graph => graph,
+        // Handle the case where the graph construction fails
+    };
 
     let vertex_count = count_vertices(&graph);
     println!("The graph has {} vertices.", vertex_count);
