@@ -2,7 +2,6 @@ mod tests;
 mod data_prep;
 mod calculate_centrality;
 
-use petgraph::dot::{Config, Dot};
 use serde::Deserialize;
 use petgraph::graph::UnGraph;
 use std::collections::HashMap;
@@ -90,12 +89,31 @@ fn main() {
     let graph = match build_graph(highways) {
         graph => graph,
     };
-    // Calculate centrality measures
-    println!("Degree Centrality: {:?}", degree_centrality(&graph));
-    println!("Betweenness Centrality: {:?}", betweenness_centrality(&graph));
-    println!("Closeness Centrality: {:?}", closeness_centrality(&graph));
-    let dot_graph = Dot::with_config(&graph, &[Config::EdgeNoLabel]);
-    println!("{:?}", dot_graph);
     
-}
+    let degree_centrality_scores = degree_centrality(&graph);
+    println!("Degree Centrality:");
+    for (state, score) in &degree_centrality_scores {
+        println!("{}: {}", state, score);
+    }
 
+    let closeness_centrality_scores = closeness_centrality(&graph);
+    println!("Closeness Centrality:");
+    for (state, score) in &closeness_centrality_scores {
+        println!("{}: {}", state, score);
+    }
+    let mut degree_vec: Vec<_> = degree_centrality_scores.iter().collect();
+    degree_vec.sort_by(|a, b| b.1.cmp(a.1));
+    println!("Top three states by degree centrality:");
+    for (state, score) in degree_vec.iter().take(3) {
+        println!("{}: {}", state, score);
+    }
+
+    // Sorting and extracting the top three states by closeness centrality
+    let mut closeness_vec: Vec<_> = closeness_centrality_scores.iter().collect();
+    closeness_vec.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+    println!("Top three states by closeness centrality:");
+    for (state, score) in closeness_vec.iter().take(3) {
+        println!("{}: {}", state, score);
+    }
+
+}
