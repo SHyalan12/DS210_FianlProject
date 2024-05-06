@@ -19,12 +19,11 @@ pub fn betweenness_centrality(graph: &UnGraph<String, ()>) -> HashMap<NodeIndex,
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
     let node_count = node_indices.len() as f64;
 
-    // Initialize centrality scores to 0.0
+
     for node in &node_indices {
         centrality.insert(*node, 0.0);
     }
 
-    // Calculate betweenness centrality for each node
     for start in &node_indices {
         for end in &node_indices {
             if start != end {
