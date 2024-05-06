@@ -5,10 +5,15 @@ use petgraph::visit::IntoNodeIdentifiers;
 use petgraph::algo::all_simple_paths;
 use std::collections::HashMap;
 
-pub fn degree_centrality(graph: &UnGraph<String, ()>) -> HashMap<NodeIndex, usize> {
-    graph.node_indices().map(|node| (node, graph.neighbors(node).count())).collect()
+pub fn degree_centrality(graph: &UnGraph<String, ()>) -> HashMap<String, usize> {
+    graph
+        .node_indices()
+        .map(|node| {
+            let state = &graph[node];
+            (state.clone(), graph.neighbors(node).count())
+        })
+        .collect()
 }
-
 pub fn betweenness_centrality(graph: &UnGraph<String, ()>) -> HashMap<NodeIndex, f64> {
     let mut centrality: HashMap<NodeIndex, f64> = HashMap::new();
     let node_indices: Vec<NodeIndex> = graph.node_indices().collect();
@@ -45,14 +50,23 @@ pub fn betweenness_centrality(graph: &UnGraph<String, ()>) -> HashMap<NodeIndex,
     centrality
 }
 
-pub fn closeness_centrality(graph: &UnGraph<String, ()>) -> HashMap<NodeIndex, f64> {
+pub fn closeness_centrality(graph: &UnGraph<String, ()>) -> HashMap<String, f64> {
     let mut centrality = HashMap::new();
     let node_ids: Vec<NodeIndex> = graph.node_identifiers().collect();
 
     for &node in &node_ids {
         let path_lengths = dijkstra(graph, node, None, |_| 1);
         let total_distance: usize = path_lengths.values().sum();
-        centrality.insert(node, if total_distance > 0 { 1.0 / total_distance as f64 } else { 0.0 });
+
+        let state = &graph[node];
+        centrality.insert(
+            state.clone(),
+            if total_distance > 0 {
+                1.0 / total_distance as f64
+            } else {
+                0.0
+            },
+        );
     }
 
     centrality
