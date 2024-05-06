@@ -81,7 +81,7 @@ fn main() {
     let current_path = env::current_dir().unwrap();
     println!("Current directory: {:?}", current_path);
 
-    let file_path = "us_highway.csv"; // Adjust this path based on the current directory
+    let file_path = "us_highway.csv";
     let file = File::open(file_path).expect("Failed to open file");
     let reader = BufReader::new(file);
 
@@ -108,7 +108,7 @@ fn main() {
         println!("{}: {}", state, score);
     }
 
-    // Sorting and extracting the top three states by closeness centrality
+
     let mut closeness_vec: Vec<_> = closeness_centrality_scores.iter().collect();
     closeness_vec.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
     println!("Top three states by closeness centrality:");
