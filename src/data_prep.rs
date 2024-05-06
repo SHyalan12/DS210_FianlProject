@@ -12,10 +12,10 @@ pub fn load_and_filter_highways<R: Read>(reader: R) -> Result<Vec<Highway>, csv:
             Ok(highway) if highway.removed.is_none() => {
                 highways.push(highway);
             },
-            Ok(_) => {}, // Ignore the record if not needed
+            Ok(_) => {},
             Err(e) => {
                 eprintln!("Error parsing CSV record: {:?}", e);
-                continue; // Continue processing after an error
+                continue;
             }
         }
     }
